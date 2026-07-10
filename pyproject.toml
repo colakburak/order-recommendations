@@ -1,0 +1,7 @@
+[project]
+name = "order-recommendations"
+version = "0.1.0"
+description = "Order Recommendation Challange"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
