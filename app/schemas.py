@@ -1,10 +1,10 @@
 from typing import Literal, Optional
 from datetime import date
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
-# lowercase, singular, no spaces, no special characters
-Category = Literal["fruits", "vegetables"]
+Category = Literal["Fruits", "Vegetables"]
+Tags = Literal["new", "price_change", "on_sale"]
 
 # Post Cleaned Schemas --------------
 class ItemRow(BaseModel):
@@ -26,10 +26,10 @@ class OrderableItemRow(BaseModel):
     item_number: int
     ordering_day: date
     delivery_day: date
-    purchase_price: float
+    purchase_price: Optional[float] = None
     suggested_retail_price: float
-    profit_margin: float
-    tags: Optional[str] = None
+    profit_margin: Optional[float] = None
+    tags: Optional[Tags] = None
     category: Category
 
 class OrderRecommendationRow(BaseModel):
@@ -37,7 +37,7 @@ class OrderRecommendationRow(BaseModel):
     item_number: int
     ordering_day: date
     delivery_day: date
-    recommended_quantity: float
+    recommended_quantity: float = Field(ge=0)
 
 
 # API Response Schemas ---------
@@ -54,6 +54,10 @@ class Metadata(BaseModel):
     rows_processed: int
     rows_inserted: int
     rows_skipped: int
+    rows_flagged: int = 0
+    rows_clamped: int = 0
+    rows_excluded: int = 0
+    catalog_gaps: int = 0
 
 
 class RecommendationResponse(BaseModel):
@@ -70,7 +74,7 @@ class RecommendationResponse(BaseModel):
                     {
                         "item_number": 1023,
                         "name": "Papaya",
-                        "category": "fruits",
+                        "category": "Fruits",
                         "current_inventory": 50,
                         "recommended_quantity": 100,
                         "delivery_day": "2026-01-02"
@@ -78,7 +82,7 @@ class RecommendationResponse(BaseModel):
                     {
                         "item_number": 1028,
                         "name": "Cucumber",
-                        "category": "vegetables",
+                        "category": "Vegetables",
                         "current_inventory": 30,
                         "recommended_quantity": 80,
                         "delivery_day": "2026-01-02"
@@ -107,7 +111,11 @@ class UploadResponse(BaseModel):
                     "file_name": "items.csv",
                     "rows_processed": 100,
                     "rows_inserted": 98,
-                    "rows_skipped": 2
+                    "rows_skipped": 2,
+                    "rows_flagged": 0,
+                    "rows_clamped": 0,
+                    "rows_excluded": 0,
+                    "catalog_gaps": 0
                 }
             }
         }
