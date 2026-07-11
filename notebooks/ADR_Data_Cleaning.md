@@ -5,7 +5,7 @@ Design Decisions for ingestion layer's cleaning procces.
 ## items.csv (50 rows, cleanest file)
 | Problem | Fix |
 |---|---|
-| `category` casing (3 rows) | normalize -> `Fruits` / `Vegetables` |
+| `category` casing (3 rows) | normalize -> `fruits` / `vegetables` |
 | `name` trailing whitespace (4 rows) | strip |
 
 ## inventory.csv (25,868 rows)
