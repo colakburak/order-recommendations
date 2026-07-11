@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi[standard]>=0.139.0",
+    "pandas>=3.0.3",
     "pydantic>=2.13.4",
     "sqlalchemy>=2.0.51",
 ]
@@ -15,7 +16,6 @@ dev = [
     "httpx>=0.28.1",
     "jupyterlab>=4.6.1",
     "matplotlib>=3.11.0",
-    "pandas>=3.0.3",
     "pytest>=9.1.1",
     "ruff>=0.15.21",
     "seaborn>=0.13.2",
