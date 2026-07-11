@@ -49,15 +49,17 @@ class Recommendation(BaseModel):
     recommended_quantity: float
     delivery_day: date
 
+class FlagCount(BaseModel):
+    reason: str
+    description: str
+    count: int
+
 class Metadata(BaseModel):
     file_name: str
     rows_processed: int
     rows_inserted: int
     rows_skipped: int
-    rows_flagged: int = 0
-    rows_clamped: int = 0
-    rows_excluded: int = 0
-    catalog_gaps: int = 0
+    flags: list[FlagCount] = []
 
 
 class RecommendationResponse(BaseModel):
@@ -112,10 +114,7 @@ class UploadResponse(BaseModel):
                     "rows_processed": 100,
                     "rows_inserted": 98,
                     "rows_skipped": 2,
-                    "rows_flagged": 0,
-                    "rows_clamped": 0,
-                    "rows_excluded": 0,
-                    "catalog_gaps": 0
+                    "flags": []
                 }
             }
         }

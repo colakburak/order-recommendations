@@ -11,6 +11,14 @@ from app.models import Base, Inventory, Item, OrderableItem, OrderRecommendation
 
 DEFAULT_DB_PATH = os.environ.get("APP_DB_PATH", "app.db")
 
+# SQLite caps bound parameters per statement at 32766
+_INSERT_BATCH_SIZE = 500
+
+
+def _chunked(rows: list[dict], size: int = _INSERT_BATCH_SIZE) -> Iterator[list[dict]]:
+    for i in range(0, len(rows), size):
+        yield rows[i : i + size]
+
 
 def _make_engine(db_path: str):
     if db_path == ":memory:":
@@ -43,13 +51,14 @@ def upsert_items(conn: Connection, rows: Iterable[dict]) -> None:
     rows = list(rows)
     if not rows:
         return
-    stmt = sqlite_insert(Item).values(rows)
     update_cols = ("name", "category", "is_bio", "purchase_price", "suggested_retail_price")
-    stmt = stmt.on_conflict_do_update(
-        index_elements=["item_number"],
-        set_={col: stmt.excluded[col] for col in update_cols},
-    )
-    conn.execute(stmt)
+    for batch in _chunked(rows):
+        stmt = sqlite_insert(Item).values(batch)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["item_number"],
+            set_={col: stmt.excluded[col] for col in update_cols},
+        )
+        conn.execute(stmt)
 
 
 def upsert_inventory(conn: Connection, rows: Iterable[dict]) -> None:
@@ -65,12 +74,13 @@ def upsert_inventory(conn: Connection, rows: Iterable[dict]) -> None:
     conn.execute(
         delete(Inventory).where(tuple_(Inventory.store_id, Inventory.day).in_(scopes))
     )
-    stmt = sqlite_insert(Inventory).values(rows)
-    stmt = stmt.on_conflict_do_update(
-        index_elements=["store_id", "item_number", "day"],
-        set_={"quantity": stmt.excluded["quantity"]},
-    )
-    conn.execute(stmt)
+    for batch in _chunked(rows):
+        stmt = sqlite_insert(Inventory).values(batch)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["store_id", "item_number", "day"],
+            set_={"quantity": stmt.excluded["quantity"]},
+        )
+        conn.execute(stmt)
 
 
 def upsert_orderable_items(conn: Connection, rows: Iterable[dict]) -> None:
@@ -89,7 +99,6 @@ def upsert_orderable_items(conn: Connection, rows: Iterable[dict]) -> None:
             tuple_(OrderableItem.store_id, OrderableItem.ordering_day).in_(scopes)
         )
     )
-    stmt = sqlite_insert(OrderableItem).values(rows)
     update_cols = (
         "delivery_day",
         "purchase_price",
@@ -98,11 +107,13 @@ def upsert_orderable_items(conn: Connection, rows: Iterable[dict]) -> None:
         "tags",
         "category",
     )
-    stmt = stmt.on_conflict_do_update(
-        index_elements=["store_id", "item_number", "ordering_day"],
-        set_={col: stmt.excluded[col] for col in update_cols},
-    )
-    conn.execute(stmt)
+    for batch in _chunked(rows):
+        stmt = sqlite_insert(OrderableItem).values(batch)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["store_id", "item_number", "ordering_day"],
+            set_={col: stmt.excluded[col] for col in update_cols},
+        )
+        conn.execute(stmt)
 
 
 def upsert_order_recommendations(conn: Connection, rows: Iterable[dict]) -> None:
@@ -121,10 +132,11 @@ def upsert_order_recommendations(conn: Connection, rows: Iterable[dict]) -> None
             tuple_(OrderRecommendation.store_id, OrderRecommendation.ordering_day).in_(scopes)
         )
     )
-    stmt = sqlite_insert(OrderRecommendation).values(rows)
     update_cols = ("delivery_day", "recommended_quantity")
-    stmt = stmt.on_conflict_do_update(
-        index_elements=["store_id", "item_number", "ordering_day"],
-        set_={col: stmt.excluded[col] for col in update_cols},
-    )
-    conn.execute(stmt)
+    for batch in _chunked(rows):
+        stmt = sqlite_insert(OrderRecommendation).values(batch)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["store_id", "item_number", "ordering_day"],
+            set_={col: stmt.excluded[col] for col in update_cols},
+        )
+        conn.execute(stmt)
