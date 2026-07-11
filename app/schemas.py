@@ -3,7 +3,7 @@ from datetime import date
 
 from pydantic import BaseModel, ConfigDict, Field
 
-Category = Literal["Fruits", "Vegetables"]
+Category = Literal["fruits", "vegetables"]
 Tags = Literal["new", "price_change", "on_sale"]
 
 # Post Cleaned Schemas --------------
@@ -74,7 +74,7 @@ class RecommendationResponse(BaseModel):
                     {
                         "item_number": 1023,
                         "name": "Papaya",
-                        "category": "Fruits",
+                        "category": "fruits",
                         "current_inventory": 50,
                         "recommended_quantity": 100,
                         "delivery_day": "2026-01-02"
@@ -82,7 +82,7 @@ class RecommendationResponse(BaseModel):
                     {
                         "item_number": 1028,
                         "name": "Cucumber",
-                        "category": "Vegetables",
+                        "category": "vegetables",
                         "current_inventory": 30,
                         "recommended_quantity": 80,
                         "delivery_day": "2026-01-02"
