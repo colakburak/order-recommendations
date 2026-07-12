@@ -2,9 +2,15 @@ import math
 from datetime import date, datetime
 from typing import Annotated, Any
 
-from pydantic import BeforeValidator, Field
+from pydantic import BeforeValidator, Field, ValidationInfo
 
 _DATE_FORMATS = ("%Y-%m-%d", "%d/%m/%Y")
+
+
+def _flag(info: ValidationInfo, name: str) -> None:
+    """Record that this value needed fixing. No context means nobody is counting."""
+    if info.context is not None:
+        info.context.add(name)
 
 
 def clean_row(raw: dict[str, Any]) -> dict[str, Any]:
@@ -42,11 +48,15 @@ def _to_int(value: Any) -> Any:
         return value
 
 
-def _to_pieces(value: Any) -> Any:
+def _to_pieces(value: Any, info: ValidationInfo) -> Any:
     try:
-        return max(math.ceil(float(value)), 0)
+        pieces = math.ceil(float(value))
     except (TypeError, ValueError):
         return value
+    if pieces < 0:
+        _flag(info, "quantity_clamped")
+        return 0
+    return pieces
 
 
 # Every validator hands back what it cannot parse, so pydantic raises the error and the

@@ -79,7 +79,7 @@ class Metadata(BaseModel):
     file_name: str
     rows_processed: int
     rows_inserted: int
-    # flags: list[FlagCount] = [] Out of scope for now
+    details: dict[str, int] = {}
 
 class RecommendationResponse(BaseModel):
     """Response schema for the get /stores/{store_id}/recommendations endpoint"""
@@ -139,11 +139,15 @@ class UploadResponse(BaseModel):
         json_schema_extra={
             "example": {
                 "status": "success",
-                "message": "Inventory uploaded successfully.",
+                "message": "Orderable items uploaded successfully.",
                 "metadata": {
-                    "file_name": "inventory.csv",
+                    "file_name": "orderable_items.csv",
                     "rows_processed": 100,
                     "rows_inserted": 98,
+                    "details": {
+                        "trailing_comma_fixed": 4,
+                        "quantity_clamped": 2
+                    }
                 }
             }
         }

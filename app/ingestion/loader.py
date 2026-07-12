@@ -27,46 +27,47 @@ def load(content: bytes, filename: str, dataset: Dataset) -> Metadata:
         )
 
     rows_processed = 0
-    rows_repaired = 0
+    details: Counter[str] = Counter()
     rows_skipped: Counter[str] = Counter()
     rows: list[dict] = []
     for raw in reader:
         rows_processed += 1
+        # Cleaners record their fixes here
+        row_flags: set[str] = set()
 
-        # A trailing comma gives the row a surplus field, which DictReader parks under its
-        # `None` restkey. Blank surplus -> the named fields are still aligned, so drop the
-        # surplus and keep the row. Surplus with content -> a value held an unquoted comma
-        # and every field after it shifted; which one is unknowable, so the row goes.
-        # (A row with *fewer* fields needs nothing: DictReader gives the omitted columns
-        # None, and the schema already answers for that -- required drops, optional keeps.)
+        # DictReader parks surplus fields under its `None` restkey. Blank surplus (trailing
+        # comma) -> the named fields still line up, so keep the row. Surplus with content ->
+        # an unquoted comma shifted everything after it, unknowably, so the row goes.
         surplus = raw.pop(None, [])
         if any(value.strip() for value in surplus):
             rows_skipped["misaligned"] += 1
             continue
         if surplus:
-            rows_repaired += 1
+            row_flags.add("trailing_comma_fixed")
 
         try:
-            row = dataset.row_schema.model_validate(clean_row(raw))
+            row = dataset.row_schema.model_validate(clean_row(raw), context=row_flags)
         except ValidationError:
             rows_skipped["invalid"] += 1
             continue
 
+        details.update(row_flags)
         rows.append(row.model_dump())
 
     with get_connection() as conn:
         upsert(conn, dataset, rows)
 
-    if rows_repaired:
-        logger.info("Repaired %d trailing-comma rows in %s", rows_repaired, filename)
     if rows_skipped:
         logger.warning(
             "Skipped %d rows in %s: %s", sum(rows_skipped.values()), filename, dict(rows_skipped)
         )
-    logger.info("Loaded %s: %d/%d rows inserted", filename, len(rows), rows_processed)
+    logger.info(
+        "Loaded %s: %d/%d rows inserted, fixes %s", filename, len(rows), rows_processed, dict(details)
+    )
 
     return Metadata(
         file_name=filename,
         rows_processed=rows_processed,
         rows_inserted=len(rows),
+        details=dict(details),
     )
