@@ -27,18 +27,24 @@ def load(content: bytes, filename: str, dataset: Dataset) -> Metadata:
         )
 
     rows_processed = 0
+    rows_repaired = 0
     rows_skipped: Counter[str] = Counter()
     rows: list[dict] = []
     for raw in reader:
         rows_processed += 1
 
-        # A row with more fields than the header (a trailing comma) parks the surplus
-        # under DictReader's `None` restkey. A row with fewer gets None for the columns
-        # it omitted, which the schema already answers for -- required drops, optional keeps.
-        # TODO: salvage the surplus-field rows instead of rejecting them.
-        if None in raw:
-            rows_skipped["malformed"] += 1
+        # A trailing comma gives the row a surplus field, which DictReader parks under its
+        # `None` restkey. Blank surplus -> the named fields are still aligned, so drop the
+        # surplus and keep the row. Surplus with content -> a value held an unquoted comma
+        # and every field after it shifted; which one is unknowable, so the row goes.
+        # (A row with *fewer* fields needs nothing: DictReader gives the omitted columns
+        # None, and the schema already answers for that -- required drops, optional keeps.)
+        surplus = raw.pop(None, [])
+        if any(value.strip() for value in surplus):
+            rows_skipped["misaligned"] += 1
             continue
+        if surplus:
+            rows_repaired += 1
 
         try:
             row = dataset.row_schema.model_validate(clean_row(raw))
@@ -51,6 +57,8 @@ def load(content: bytes, filename: str, dataset: Dataset) -> Metadata:
     with get_connection() as conn:
         upsert(conn, dataset, rows)
 
+    if rows_repaired:
+        logger.info("Repaired %d trailing-comma rows in %s", rows_repaired, filename)
     if rows_skipped:
         logger.warning(
             "Skipped %d rows in %s: %s", sum(rows_skipped.values()), filename, dict(rows_skipped)

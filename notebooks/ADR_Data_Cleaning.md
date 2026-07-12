@@ -26,7 +26,7 @@ A missing value is then only a problem if the column is required.
 | `store_id` casing/whitespace | strip + lowercase |
 | `category` casing (5.7%) | lowercase |
 | `tags` casing/whitespace (0.3%) | strip + lowercase |
-| Trailing comma / 10th field which dne (240 rows) | **drop the row!** (TODO: salvage) |
+| Trailing comma / 10th field which dne (240 rows) | **Keep the row.** The surplus field is blank in all 240, so the named fields are still aligned: drop the surplus, keep the row. A surplus *with content* means an unquoted comma shifted every field after it -- unknowable which, so **that** row we drop |
 | `purchase_price` + `profit_margin` always co-missing (5.2%) | **keep, nullable**, not required for orderability |
 
 
