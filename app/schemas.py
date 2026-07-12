@@ -47,13 +47,33 @@ class OrderRecommendationRow(BaseModel):
 
 # API Response Schemas ---------
 class Recommendation(BaseModel):
+    """One recommended order line, enriched with the item and its price for this day.
+
+    Five fields are nullable. `is_bio` is null for an item that is orderable but has no
+    catalog entry. `tags` is null for most items. `purchase_price` and `profit_margin`
+    go missing together in the source data (~5% of rows), and `order_cost` derives from
+    `purchase_price`, so it is null exactly when that is. The recommendation still
+    stands in every one of those cases -- none of them decide orderability.
+    """
+
     item_number: int
     name: str
     category: str
-    # An order is placed in whole pieces; stock is measured, so it stays fractional.
+    is_bio: Optional[bool] = None
+    tags: Optional[str] = None
+
+    # order is placed in whole pieces; stock is measured, so it stays fractional.
     current_inventory: float
     recommended_quantity: int
     delivery_day: date
+
+    # price differ from items vs orderable_items
+    # we use the orderable_items price if it exists
+    purchase_price: Optional[float] = None
+    suggested_retail_price: float
+    profit_margin: Optional[float] = None
+    # recommended_quantity * purchase_price: what placing this line costs.
+    order_cost: Optional[float] = None
 
 class Metadata(BaseModel):
     file_name: str
@@ -76,17 +96,29 @@ class RecommendationResponse(BaseModel):
                         "item_number": 1023,
                         "name": "Papaya",
                         "category": "fruits",
+                        "is_bio": False,
+                        "tags": "on_sale",
                         "current_inventory": 50,
                         "recommended_quantity": 100,
-                        "delivery_day": "2026-01-02"
+                        "delivery_day": "2026-01-02",
+                        "purchase_price": 1.35,
+                        "suggested_retail_price": 2.49,
+                        "profit_margin": 0.4578,
+                        "order_cost": 135.0
                     },
                     {
                         "item_number": 1028,
                         "name": "Cucumber",
                         "category": "vegetables",
+                        "is_bio": True,
+                        "tags": "price_change",
                         "current_inventory": 30,
                         "recommended_quantity": 80,
-                        "delivery_day": "2026-01-02"
+                        "delivery_day": "2026-01-02",
+                        "purchase_price": 0.31,
+                        "suggested_retail_price": 0.59,
+                        "profit_margin": 0.4746,
+                        "order_cost": 24.8
                     }
                 ]
             }
