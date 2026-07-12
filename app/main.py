@@ -23,7 +23,7 @@ app = FastAPI(
 
 # Result Retrieval
 @app.get("/stores/{store_id}/recommendations", response_model=RecommendationResponse)
-async def get_recommendations(
+def get_recommendations(
     store_id: str,
     date: date
 )-> RecommendationResponse:
