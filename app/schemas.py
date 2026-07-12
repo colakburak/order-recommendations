@@ -1,67 +1,65 @@
-from typing import Literal, Optional
+from typing import Optional
 from datetime import date
 
 from pydantic import BaseModel, ConfigDict, Field
 
-Category = Literal["fruits", "vegetables"]
-Tags = Literal["new", "price_change", "on_sale"]
+from app.ingestion.cleaners import FlexDate, ItemNumber, Key, Pieces
 
-# Post Cleaned Schemas --------------
+# CSV Row Schemas --------------
+# One row of an upload, and how each raw cell becomes a typed value. `clean_row` has
+# already stripped the cell and turned a blank one into None; the field types below carry
+# whatever cleaning depends on what the column *means*.
 class ItemRow(BaseModel):
-    item_number: int
+    item_number: ItemNumber
     name: str
-    category: Category
+    category: Key
     is_bio: bool
     purchase_price: float
     suggested_retail_price: float
 
 class InventoryRow(BaseModel):
-    store_id: str
-    item_number: int
-    day: date
+    store_id: Key
+    item_number: ItemNumber
+    day: FlexDate
+    # Stock is measured, not ordered, so it stays fractional as reported.
     quantity: float = Field(allow_inf_nan=False)
 
 class OrderableItemRow(BaseModel):
-    store_id: str
-    item_number: int
-    ordering_day: date
-    delivery_day: date
+    store_id: Key
+    item_number: ItemNumber
+    ordering_day: FlexDate
+    delivery_day: FlexDate
+    # purchase_price and profit_margin go missing together and neither decides
+    # orderability, so a row without them is still worth keeping.
     purchase_price: Optional[float] = None
     suggested_retail_price: float
     profit_margin: Optional[float] = None
-    tags: Optional[Tags] = None
-    category: Category
+    tags: Optional[Key] = None
+    category: Key
 
 class OrderRecommendationRow(BaseModel):
-    store_id: str
-    item_number: int
-    ordering_day: date
-    delivery_day: date
-    recommended_quantity: int = Field(ge=0)
+    store_id: Key
+    item_number: ItemNumber
+    ordering_day: FlexDate
+    delivery_day: FlexDate
+    recommended_quantity: Pieces
 
 
 # API Response Schemas ---------
 class Recommendation(BaseModel):
     item_number: int
     name: str
-    category: Category
+    category: str
     # An order is placed in whole pieces; stock is measured, so it stays fractional.
     current_inventory: float
     recommended_quantity: int
     delivery_day: date
 
-class FlagCount(BaseModel):
-    reason: str
-    description: str
-    count: int
-
 class Metadata(BaseModel):
     file_name: str
     rows_processed: int
     rows_inserted: int
-    rows_skipped: int
-    flags: list[FlagCount] = []
-
+    # flags: list[FlagCount] = [] Out of scope for now
 
 class RecommendationResponse(BaseModel):
     """Response schema for the get /stores/{store_id}/recommendations endpoint"""
@@ -109,13 +107,11 @@ class UploadResponse(BaseModel):
         json_schema_extra={
             "example": {
                 "status": "success",
-                "message": "Items data synced successfully.",
+                "message": "Inventory uploaded successfully.",
                 "metadata": {
-                    "file_name": "items.csv",
+                    "file_name": "inventory.csv",
                     "rows_processed": 100,
                     "rows_inserted": 98,
-                    "rows_skipped": 2,
-                    "flags": []
                 }
             }
         }
