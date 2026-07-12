@@ -104,6 +104,8 @@ is orderable but absent from the catalog is still served, with its number as a f
 name. None of these decide whether a store can order the item, so none of them drop the
 line.
 
+**An order for zero pieces is not an order,** so it is not served. A negative quantity clamps to zero at ingest, and ~2,403 rows arrive as zero already. Both are stored, and the clamp is counted in the upload response, so nothing is lost and the endpoint returns only lines a store would actually put on a purchase order.
+
 ## Tests
 
 ```sh
