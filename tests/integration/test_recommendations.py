@@ -1,5 +1,7 @@
 import pytest
 
+from tests.conftest import upload
+
 
 @pytest.fixture
 def recommendations(seeded) -> dict[int, dict]:
@@ -51,6 +53,30 @@ def test_missing_inventory_and_price_do_not_drop_the_line(recommendations):
     assert cucumber["profit_margin"] is None
     assert cucumber["order_cost"] is None
     assert cucumber["recommended_quantity"] == 5
+
+
+def test_a_zero_quantity_is_not_an_order_and_is_not_served(seeded):
+    # An order for zero pieces is not an order. How the row reached zero does not matter:
+    # 1002 was zero in the file, 1003 clamped from a negative at ingest. Neither is served.
+    # The clamp is still counted in the upload response, so the upstream signal survives
+    # even though the line does not.
+    response = upload(
+        seeded,
+        "recommendations",
+        "store_id,item_number,ordering_day,delivery_day,recommended_quantity",
+        "store_a,1001,2024-01-01,2024-01-02,10",
+        "store_a,1002,2024-01-01,2024-01-02,0",
+        "store_a,1003,2024-01-01,2024-01-02,-5",
+    )
+    assert response.json()["metadata"]["rows_inserted"] == 3
+    assert response.json()["metadata"]["details"] == {"quantity_clamped": 1}
+
+    body = seeded.get(
+        "/stores/store_a/recommendations", params={"date": "2024-01-01"}
+    ).json()
+
+    assert [row["item_number"] for row in body["recommendations"]] == [1001]
+    assert body["count"] == 1
 
 
 def test_a_day_with_nothing_to_order_is_an_empty_list(seeded):

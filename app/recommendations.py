@@ -19,10 +19,13 @@ def _or_none(value: Any) -> Any:
 
 def fetch_recommendations(store_id: str, day: date) -> list[Recommendation]:
     with get_connection() as conn:
+        # An order for zero pieces is not an order. Quantities clamped from a negative land
+        # here as 0; the clamp is still reported at ingest, so the signal is not lost.
         order_recs = pd.read_sql_query(
             select(OrderRecommendation).where(
                 OrderRecommendation.store_id == store_id,
                 OrderRecommendation.ordering_day == day,
+                OrderRecommendation.recommended_quantity > 0,
             ),
             conn,
         )
