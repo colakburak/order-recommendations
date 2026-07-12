@@ -19,7 +19,7 @@ class InventoryRow(BaseModel):
     store_id: str
     item_number: int
     day: date
-    quantity: float
+    quantity: float = Field(allow_inf_nan=False)
 
 class OrderableItemRow(BaseModel):
     store_id: str
@@ -37,7 +37,7 @@ class OrderRecommendationRow(BaseModel):
     item_number: int
     ordering_day: date
     delivery_day: date
-    recommended_quantity: float = Field(ge=0)
+    recommended_quantity: int = Field(ge=0)
 
 
 # API Response Schemas ---------
@@ -45,8 +45,9 @@ class Recommendation(BaseModel):
     item_number: int
     name: str
     category: Category
+    # An order is placed in whole pieces; stock is measured, so it stays fractional.
     current_inventory: float
-    recommended_quantity: float
+    recommended_quantity: int
     delivery_day: date
 
 class FlagCount(BaseModel):

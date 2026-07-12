@@ -60,4 +60,4 @@ class OrderRecommendation(Base):
     item_number: Mapped[int] = mapped_column(primary_key=True)
     ordering_day: Mapped[date] = mapped_column(primary_key=True)
     delivery_day: Mapped[date]
-    recommended_quantity: Mapped[float]
+    recommended_quantity: Mapped[int]
