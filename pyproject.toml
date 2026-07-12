@@ -11,6 +11,14 @@ dependencies = [
     "sqlalchemy>=2.0.51",
 ]
 
+[tool.ruff]
+# Notebooks are exploration, not shipped code.
+exclude = ["notebooks"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
 [dependency-groups]
 dev = [
     "httpx>=0.28.1",
